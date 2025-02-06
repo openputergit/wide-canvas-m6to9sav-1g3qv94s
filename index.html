@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon Progress Tracker</title>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .tick-cell {
+            transition: all 0.3s ease;
+        }
+        .tick-cell:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const App = () => {
+            const [teams, setTeams] = React.useState([]);
+            const [sortOrder, setSortOrder] = React.useState('asc');
+            const timeSlots = ['5:00 PM', '8:00 PM', '11:00 PM', '2:00 AM', '5:00 AM', '8:00 AM', '11:00 AM'];
+
+            const addTeam = (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const newTeam = {
+                    name: formData.get('teamName'),
+                    problem: formData.get('problemNo'),
+                    repo: formData.get('repoLink'),
+                    updates: Array(timeSlots.length).fill(false),
+                };
+                setTeams([...teams, newTeam]);
+                e.target.reset();
+            };
+
+            const toggleUpdate = (teamIndex, slotIndex) => {
+                const newTeams = [...teams];
+                newTeams[teamIndex].updates[slotIndex] = !newTeams[teamIndex].updates[slotIndex];
+                setTeams(newTeams);
+            };
+
+            const sortTeams = () => {
+                const sorted = [...teams].sort((a, b) => {
+                    const scoreA = a.updates.filter(Boolean).length;
+                    const scoreB = b.updates.filter(Boolean).length;
+                    return sortOrder === 'asc' ? scoreB - scoreA : scoreA - scoreB;
+                });
+                setTeams(sorted);
+                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+            };
+
+            const exportData = () => {
+                const dataStr = JSON.stringify(teams, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = 'hackathon-data.json';
+
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            };
+
+            return (
+                <div className="container mx-auto px-4 py-8">
+                    <h1 className="text-4xl font-bold text-white text-center mb-8">Hackathon Progress Tracker</h1>
+                    
+                    <form onSubmit={addTeam} className="bg-white rounded-lg p-6 shadow-lg mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input
+                                required
+                                name="teamName"
+                                placeholder="Team Name"
+                                className="p-2 border rounded"
+                            />
+                            <input
+                                required
+                                name="problemNo"
+                                placeholder="Problem Statement No."
+                                className="p-2 border rounded"
+                                type="number"
+                            />
+                            <input
+                                required
+                                name="repoLink"
+                                placeholder="Repository Link"
+                                className="p-2 border rounded"
+                            />
+                        </div>
+                        <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                            Add Team
+                        </button>
+                    </form>
+
+                    <div className="bg-white rounded-lg p-6 shadow-lg overflow-x-auto">
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={exportData}
+                                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                            >
+                                Export Data
+                            </button>
+                        </div>
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="p-2 text-left">Team Name</th>
+                                    <th className="p-2 text-left">Problem No.</th>
+                                    <th className="p-2 text-left">Repo Link</th>
+                                    {timeSlots.map((slot, i) => (
+                                        <th key={i} className="p-2 text-center">{slot}</th>
+                                    ))}
+                                    <th className="p-2 text-center cursor-pointer" onClick={sortTeams}>
+                                        Score {sortOrder === 'asc' ? '↑' : '↓'}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {teams.map((team, teamIndex) => (
+                                    <tr key={teamIndex} className="border-t">
+                                        <td className="p-2">{team.name}</td>
+                                        <td className="p-2">{team.problem}</td>
+                                        <td className="p-2">
+                                            <a href={team.repo} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                                Repository
+                                            </a>
+                                        </td>
+                                        {team.updates.map((update, slotIndex) => (
+                                            <td key={slotIndex} className="p-2 text-center">
+                                                <span
+                                                    onClick={() => toggleUpdate(teamIndex, slotIndex)}
+                                                    className={`tick-cell cursor-pointer inline-block p-1 rounded ${
+                                                        update ? 'text-green-600' : 'text-gray-300'
+                                                    }`}
+                                                >
+                                                    <i className="bi bi-check-circle-fill text-2xl"></i>
+                                                </span>
+                                            </td>
+                                        ))}
+                                        <td className="p-2 text-center font-bold">
+                                            {team.updates.filter(Boolean).length}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
